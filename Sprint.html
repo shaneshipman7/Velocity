@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APR Momentum Scanner</title>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #10b981;
+            --accent-hover: #059669;
+            --danger: #ef4444;
+            --border: #334155;
+            --blue: #3b82f6;
+            --gold: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-card);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+        }
+
+        .header-area { text-align: center; margin-bottom: 1.5rem; }
+        .ticker-name-text { font-size: 1.4rem; font-weight: 700; margin: 0; }
+
+        .input-group { display: grid; gap: 16px; margin-bottom: 1.5rem; }
+        label { display: block; font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover { background-color: #2563eb; }
+        button:disabled { background-color: var(--border); cursor: not-allowed; }
+
+        #error { color: var(--danger); font-size: 0.875rem; margin-top: 1rem; display: none; text-align: center; }
+
+        .results-section { margin-top: 2rem; display: none; }
+        
+        .section-label { 
+            font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; 
+            letter-spacing: 0.05em; margin-bottom: 12px; border-left: 3px solid var(--blue); padding-left: 8px;
+        }
+
+        .sprint-card {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+        }
+
+        .sprint-info p { margin: 2px 0; }
+        .apr-badge {
+            background: var(--accent);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .date-range { font-size: 0.85rem; font-weight: 600; }
+        .duration { font-size: 0.75rem; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-area">
+        <h2>APR Velocity Scanner</h2>
+        <p id="compName" style="color: var(--text-secondary); margin: 0;">Find the fastest moves</p>
+    </div>
+    
+    <div class="input-group">
+        <div class="grid-2">
+            <div><label>Ticker</label><input type="text" id="ticker" placeholder="TSLA"></div>
+            <div><label>API Key</label><input type="password" id="polygon_key" placeholder="Key"></div>
+        </div>
+        <div class="grid-2">
+            <div><label>Start Date</label><input type="date" id="start"></div>
+            <div><label>End Date</label><input type="date" id="end"></div>
+        </div>
+    </div>
+
+    <button id="goBtn" onclick="fetchAndAnalyze()">Analyze Velocity</button>
+    <div id="error"></div>
+
+    <div id="results" class="results-section">
+        <div class="section-label">Top 3 Maximum Effective APR Sprints</div>
+        <div id="sprintList"></div>
+    </div>
+</div>
+
+<script>
+// Auto-fill logic
+const today = new Date().toISOString().split('T')[0];
+const sixtyAgo = new Date(Date.now() - 60*24*60*60*1000).toISOString().split('T')[0];
+document.getElementById('start').value = sixtyAgo;
+document.getElementById('end').value = today;
+
+const savedKey = localStorage.getItem('polygon_persistent_key');
+if (savedKey) document.getElementById('polygon_key').value = savedKey;
+
+function calcAPR(gainPct, days) {
+    if (days <= 0) return 0;
+    // Annualized return formula: ((1 + r)^(365/n)) - 1
+    return (Math.pow(1 + (gainPct/100), 365/days) - 1) * 100;
+}
+
+const formatDate = (ts) => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+
+async function fetchAndAnalyze() {
+    const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+    const start = document.getElementById('start').value;
+    const end = document.getElementById('end').value;
+    const apiKey = document.getElementById('polygon_key').value.trim();
+    const errEl = document.getElementById('error');
+    const resultsArea = document.getElementById('results');
+    const sprintList = document.getElementById('sprintList');
+
+    if (!ticker || !apiKey) {
+        errEl.textContent = "Ticker and Key required.";
+        errEl.style.display = "block";
+        return;
+    }
+
+    localStorage.setItem('polygon_persistent_key', apiKey);
+    errEl.style.display = "none";
+    
+    const btn = document.getElementById('goBtn');
+    btn.textContent = 'Scanning all pairs...';
+    btn.disabled = true;
+
+    try {
+        const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${start}/${end}?adjusted=true&sort=asc&apiKey=${apiKey}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (!data.results) throw new Error("No data found.");
+
+        const prices = data.results;
+        let allPossibleTrades = [];
+
+        // NESTED LOOP: Compare every single day to every subsequent day
+        // This finds the true mathematical "maximum slope"
+        for (let i = 0; i < prices.length; i++) {
+            for (let j = i + 2; j < prices.length; j++) { // Min 2 day hold to avoid flash noise
+                const entryPrice = prices[i].c;
+                const exitPrice = prices[j].c;
+                const gainPct = ((exitPrice - entryPrice) / entryPrice) * 100;
+                const msDiff = prices[j].t - prices[i].t;
+                const days = Math.max(1, Math.round(msDiff / 86400000));
+                
+                const apr = calcAPR(gainPct, days);
+                
+                allPossibleTrades.push({
+                    entryDate: prices[i].t,
+                    exitDate: prices[j].t,
+                    entryP: entryPrice,
+                    exitP: exitPrice,
+                    gain: gainPct,
+                    days: days,
+                    apr: apr
+                });
+            }
+        }
+
+        // Sort by APR descending
+        allPossibleTrades.sort((a, b) => b.apr - a.apr);
+
+        // Filter to ensure we don't just show 3 slightly different versions of the same move
+        let uniqueSprints = [];
+        for (let trade of allPossibleTrades) {
+            const isOverlap = uniqueSprints.some(s => 
+                (trade.entryDate >= s.entryDate && trade.entryDate <= s.exitDate) ||
+                (trade.exitDate >= s.entryDate && trade.exitDate <= s.exitDate)
+            );
+            if (!isOverlap) uniqueSprints.push(trade);
+            if (uniqueSprints.length >= 3) break;
+        }
+
+        // Display
+        sprintList.innerHTML = '';
+        uniqueSprints.forEach((s, index) => {
+            sprintList.innerHTML += `
+                <div class="sprint-card">
+                    <div class="sprint-info">
+                        <p class="date-range">${formatDate(s.entryDate)} → ${formatDate(s.exitDate)}</p>
+                        <p class="duration">${s.days} day move • $${s.entryP.toFixed(2)} to $${s.exitP.toFixed(2)}</p>
+                        <p style="color:var(--accent); font-weight:bold; font-size:0.9rem;">+${s.gain.toFixed(2)}% Total Gain</p>
+                    </div>
+                    <div class="apr-badge">${s.apr > 100000 ? '>100k' : Math.round(s.apr).toLocaleString()}% APR</div>
+                </div>
+            `;
+        });
+
+        resultsArea.style.display = 'block';
+
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+    } finally {
+        btn.textContent = 'Analyze Velocity';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>
