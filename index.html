@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APR Momentum Scanner</title>
+    <title>APR Velocity Scanner Pro</title>
     <style>
         :root {
             --bg-main: #0f172a;
@@ -11,15 +11,13 @@
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
             --accent: #10b981;
-            --accent-hover: #059669;
             --danger: #ef4444;
             --border: #334155;
             --blue: #3b82f6;
-            --gold: #f59e0b;
         }
 
         body {
-            font-family: 'Inter', system-ui, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background-color: var(--bg-main);
             color: var(--text-primary);
             display: flex;
@@ -32,7 +30,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             background: var(--bg-card);
             padding: 2rem;
             border-radius: 16px;
@@ -41,11 +39,17 @@
         }
 
         .header-area { text-align: center; margin-bottom: 1.5rem; }
-        .ticker-name-text { font-size: 1.4rem; font-weight: 700; margin: 0; }
-
-        .input-group { display: grid; gap: 16px; margin-bottom: 1.5rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
         
+        .input-group { display: grid; gap: 16px; margin-bottom: 1.5rem; }
+        
+        label { 
+            display: block; 
+            font-size: 0.85rem; 
+            color: var(--text-secondary); 
+            font-weight: 500; 
+            margin-bottom: 6px; 
+        }
+
         .label-row {
             display: flex;
             justify-content: space-between;
@@ -56,14 +60,10 @@
             font-size: 0.75rem;
             color: var(--blue);
             text-decoration: none;
-            margin-bottom: 6px;
             transition: opacity 0.2s;
         }
 
-        .helper-link:hover {
-            text-decoration: underline;
-            opacity: 0.8;
-        }
+        .helper-link:hover { text-decoration: underline; opacity: 0.8; }
 
         input {
             width: 100%;
@@ -77,7 +77,8 @@
             outline: none;
         }
 
-        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         button {
@@ -93,49 +94,79 @@
             transition: all 0.2s;
         }
 
-        button:hover { background-color: #2563eb; }
+        button:hover { background-color: #2563eb; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
         button:disabled { background-color: var(--border); cursor: not-allowed; }
 
-        #error { color: var(--danger); font-size: 0.875rem; margin-top: 1rem; display: none; text-align: center; }
+        .results-section { 
+            margin-top: 2rem; 
+            display: none; 
+            max-height: 520px; 
+            overflow-y: auto;
+            padding-right: 8px;
+        }
 
-        .results-section { margin-top: 2rem; display: none; }
-        
+        .results-section::-webkit-scrollbar { width: 6px; }
+        .results-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
         .section-label { 
-            font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; 
-            letter-spacing: 0.05em; margin-bottom: 12px; border-left: 3px solid var(--blue); padding-left: 8px;
+            font-size: 0.75rem; 
+            color: var(--text-secondary); 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+            margin-bottom: 12px; 
+            position: sticky; 
+            top: 0; 
+            background: var(--bg-card); 
+            padding: 5px 0;
+            z-index: 10;
         }
 
         .sprint-card {
-            background: rgba(16, 185, 129, 0.05);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
             border-radius: 12px;
             padding: 1rem;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             display: grid;
-            grid-template-columns: 1fr auto;
+            grid-template-columns: 35px 1fr auto;
             align-items: center;
+            transition: all 0.2s;
         }
 
+        .sprint-card:hover { 
+            background: rgba(16, 185, 129, 0.06); 
+            border-color: var(--accent);
+            transform: scale(1.01);
+        }
+
+        .rank { font-weight: 800; color: var(--text-secondary); font-size: 0.85rem; }
         .sprint-info p { margin: 2px 0; }
+        
         .apr-badge {
             background: var(--accent);
             color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 8px 12px;
+            border-radius: 8px;
             font-weight: 800;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            text-align: center;
+            min-width: 85px;
+            line-height: 1.2;
         }
 
-        .date-range { font-size: 0.85rem; font-weight: 600; }
-        .duration { font-size: 0.75rem; color: var(--text-secondary); }
+        .date-range { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+        .duration { font-size: 0.8rem; color: var(--text-secondary); }
+        
+        #error { color: var(--danger); font-size: 0.85rem; margin-top: 1rem; text-align: center; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header-area">
-        <h2>APR Velocity Scanner</h2>
-        <p id="compName" style="color: var(--text-secondary); margin: 0;">Find the fastest moves</p>
+        <h2 style="margin:0 0 5px 0;">APR Velocity Scanner</h2>
+        <p style="color: var(--text-secondary); margin: 0; font-size: 0.9rem;">Ranked Top 10 Explosive Moves</p>
     </div>
     
     <div class="input-group">
@@ -144,7 +175,7 @@
             <div>
                 <div class="label-row">
                     <label>API Key</label>
-                    <a href="https://massive.com/dashboard/keys" target="_blank" class="helper-link">Get Key</a>
+                    <a href="https://polygon.io/dashboard/api-keys" target="_blank" class="helper-link">Get Key</a>
                 </div>
                 <input type="password" id="polygon_key" placeholder="Key">
             </div>
@@ -155,20 +186,20 @@
         </div>
     </div>
 
-    <button id="goBtn" onclick="fetchAndAnalyze()">Analyze Velocity</button>
+    <button id="goBtn" onclick="fetchAndAnalyze()">Run Deep Scan</button>
     <div id="error"></div>
 
     <div id="results" class="results-section">
-        <div class="section-label">Top 3 Maximum Effective APR Sprints</div>
+        <div class="section-label">Top 10 Maximum Effective APR Sprints</div>
         <div id="sprintList"></div>
     </div>
 </div>
 
 <script>
-// Auto-fill logic
+// Initialization
 const today = new Date().toISOString().split('T')[0];
-const sixtyAgo = new Date(Date.now() - 60*24*60*60*1000).toISOString().split('T')[0];
-document.getElementById('start').value = sixtyAgo;
+const ninetyAgo = new Date(Date.now() - 90*24*60*60*1000).toISOString().split('T')[0];
+document.getElementById('start').value = ninetyAgo;
 document.getElementById('end').value = today;
 
 const savedKey = localStorage.getItem('polygon_persistent_key');
@@ -176,6 +207,7 @@ if (savedKey) document.getElementById('polygon_key').value = savedKey;
 
 function calcAPR(gainPct, days) {
     if (days <= 0) return 0;
+    // ( (1 + gain)^ (365/days) - 1 )
     return (Math.pow(1 + (gainPct/100), 365/days) - 1) * 100;
 }
 
@@ -189,18 +221,17 @@ async function fetchAndAnalyze() {
     const errEl = document.getElementById('error');
     const resultsArea = document.getElementById('results');
     const sprintList = document.getElementById('sprintList');
+    const btn = document.getElementById('goBtn');
 
     if (!ticker || !apiKey) {
-        errEl.textContent = "Ticker and Key required.";
+        errEl.textContent = "Please provide both Ticker and API Key.";
         errEl.style.display = "block";
         return;
     }
 
     localStorage.setItem('polygon_persistent_key', apiKey);
     errEl.style.display = "none";
-    
-    const btn = document.getElementById('goBtn');
-    btn.textContent = 'Scanning all pairs...';
+    btn.textContent = 'Scanning Data...';
     btn.disabled = true;
 
     try {
@@ -208,16 +239,21 @@ async function fetchAndAnalyze() {
         const res = await fetch(url);
         const data = await res.json();
 
-        if (!data.results) throw new Error("No data found.");
+        if (!data.results) throw new Error(data.error || "No historical data found.");
 
         const prices = data.results;
         let allPossibleTrades = [];
 
+        // Generate all unique combinations of start/end dates
         for (let i = 0; i < prices.length; i++) {
-            for (let j = i + 2; j < prices.length; j++) {
+            for (let j = i + 1; j < prices.length; j++) {
                 const entryPrice = prices[i].c;
                 const exitPrice = prices[j].c;
                 const gainPct = ((exitPrice - entryPrice) / entryPrice) * 100;
+                
+                // Only care about gains
+                if (gainPct <= 0) continue;
+
                 const msDiff = prices[j].t - prices[i].t;
                 const days = Math.max(1, Math.round(msDiff / 86400000));
                 
@@ -235,28 +271,31 @@ async function fetchAndAnalyze() {
             }
         }
 
+        // Sort by highest APR first
         allPossibleTrades.sort((a, b) => b.apr - a.apr);
 
+        // Filter for Non-Overlapping Windows
         let uniqueSprints = [];
         for (let trade of allPossibleTrades) {
             const isOverlap = uniqueSprints.some(s => 
-                (trade.entryDate >= s.entryDate && trade.entryDate <= s.exitDate) ||
-                (trade.exitDate >= s.entryDate && trade.exitDate <= s.exitDate)
+                (trade.entryDate < s.exitDate && trade.exitDate > s.entryDate)
             );
             if (!isOverlap) uniqueSprints.push(trade);
-            if (uniqueSprints.length >= 3) break;
+            if (uniqueSprints.length >= 10) break;
         }
 
         sprintList.innerHTML = '';
         uniqueSprints.forEach((s, index) => {
+            const aprDisplay = s.apr > 1000000 ? '>1M' : Math.round(s.apr).toLocaleString();
             sprintList.innerHTML += `
                 <div class="sprint-card">
+                    <div class="rank">#${index + 1}</div>
                     <div class="sprint-info">
                         <p class="date-range">${formatDate(s.entryDate)} → ${formatDate(s.exitDate)}</p>
-                        <p class="duration">${s.days} day move • $${s.entryP.toFixed(2)} to $${s.exitP.toFixed(2)}</p>
-                        <p style="color:var(--accent); font-weight:bold; font-size:0.9rem;">+${s.gain.toFixed(2)}% Total Gain</p>
+                        <p class="duration">${s.days} day window • $${s.entryP.toFixed(2)} to $${s.exitP.toFixed(2)}</p>
+                        <p style="color:var(--accent); font-weight:bold; font-size:0.85rem;">+${s.gain.toFixed(2)}% Total Gain</p>
                     </div>
-                    <div class="apr-badge">${s.apr > 100000 ? '>100k' : Math.round(s.apr).toLocaleString()}% APR</div>
+                    <div class="apr-badge">${aprDisplay}%<br><span style="font-size:0.6rem; opacity:0.9; font-weight:400;">EST. APR</span></div>
                 </div>
             `;
         });
@@ -267,7 +306,7 @@ async function fetchAndAnalyze() {
         errEl.textContent = e.message;
         errEl.style.display = 'block';
     } finally {
-        btn.textContent = 'Analyze Velocity';
+        btn.textContent = 'Run Deep Scan';
         btn.disabled = false;
     }
 }
