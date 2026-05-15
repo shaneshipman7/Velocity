@@ -46,6 +46,25 @@
         .input-group { display: grid; gap: 16px; margin-bottom: 1.5rem; }
         label { display: block; font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 6px; }
         
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .helper-link {
+            font-size: 0.75rem;
+            color: var(--blue);
+            text-decoration: none;
+            margin-bottom: 6px;
+            transition: opacity 0.2s;
+        }
+
+        .helper-link:hover {
+            text-decoration: underline;
+            opacity: 0.8;
+        }
+
         input {
             width: 100%;
             padding: 12px;
@@ -122,7 +141,13 @@
     <div class="input-group">
         <div class="grid-2">
             <div><label>Ticker</label><input type="text" id="ticker" placeholder="TSLA"></div>
-            <div><label>API Key</label><input type="password" id="polygon_key" placeholder="Key"></div>
+            <div>
+                <div class="label-row">
+                    <label>API Key</label>
+                    <a href="https://massive.com/dashboard/keys" target="_blank" class="helper-link">Get Key</a>
+                </div>
+                <input type="password" id="polygon_key" placeholder="Key">
+            </div>
         </div>
         <div class="grid-2">
             <div><label>Start Date</label><input type="date" id="start"></div>
@@ -151,7 +176,6 @@ if (savedKey) document.getElementById('polygon_key').value = savedKey;
 
 function calcAPR(gainPct, days) {
     if (days <= 0) return 0;
-    // Annualized return formula: ((1 + r)^(365/n)) - 1
     return (Math.pow(1 + (gainPct/100), 365/days) - 1) * 100;
 }
 
@@ -189,10 +213,8 @@ async function fetchAndAnalyze() {
         const prices = data.results;
         let allPossibleTrades = [];
 
-        // NESTED LOOP: Compare every single day to every subsequent day
-        // This finds the true mathematical "maximum slope"
         for (let i = 0; i < prices.length; i++) {
-            for (let j = i + 2; j < prices.length; j++) { // Min 2 day hold to avoid flash noise
+            for (let j = i + 2; j < prices.length; j++) {
                 const entryPrice = prices[i].c;
                 const exitPrice = prices[j].c;
                 const gainPct = ((exitPrice - entryPrice) / entryPrice) * 100;
@@ -213,10 +235,8 @@ async function fetchAndAnalyze() {
             }
         }
 
-        // Sort by APR descending
         allPossibleTrades.sort((a, b) => b.apr - a.apr);
 
-        // Filter to ensure we don't just show 3 slightly different versions of the same move
         let uniqueSprints = [];
         for (let trade of allPossibleTrades) {
             const isOverlap = uniqueSprints.some(s => 
@@ -227,7 +247,6 @@ async function fetchAndAnalyze() {
             if (uniqueSprints.length >= 3) break;
         }
 
-        // Display
         sprintList.innerHTML = '';
         uniqueSprints.forEach((s, index) => {
             sprintList.innerHTML += `
